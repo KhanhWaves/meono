@@ -126,7 +126,10 @@ export class GameRoom extends Room<GameRoomState> {
 
             this.state.deckLength = this.state.deck.length;
             this.state.setDistanceToImplosion(this.state.distanceToImplosion - 1);
-            this.state.players.at(this.state.turnIndex).cards.push(card);
+            // Only push non-bomb cards to hand; bomb cards are handled directly in checkCardForDeath
+            if (card !== Card.EXPLODING && card !== Card.IMPLODING) {
+                this.state.players.at(this.state.turnIndex).cards.push(card);
+            }
             this.checkCardForDeath(card, true);
         })
 
@@ -196,7 +199,10 @@ export class GameRoom extends Room<GameRoomState> {
 
                         this.state.deckLength = this.state.deck.length;
                         this.state.setDistanceToImplosion(this.state.distanceToImplosion); // Recalculate distance estimator
-                        this.state.players.at(this.state.turnIndex).cards.push(card);
+                        // Only push non-bomb cards to hand; bomb cards are handled directly in checkCardForDeath
+                        if (card !== Card.EXPLODING && card !== Card.IMPLODING) {
+                            this.state.players.at(this.state.turnIndex).cards.push(card);
+                        }
                         this.checkCardForDeath(card, true);
                         break;
 
@@ -693,7 +699,7 @@ export class GameRoom extends Room<GameRoomState> {
                 this.broadcast("imploded", { player: this.state.players.at(this.state.turnIndex).sessionId });
                 this.removePlayer(this.state.turnIndex, true);
             } else {
-                this.state.players.at(this.state.turnIndex).cards.deleteAt(this.state.players.at(this.state.turnIndex).cards.indexOf(Card.IMPLODING));
+                // Imploding was never added to hand, just reveal it
                 this.state.implosionRevealed = true;
                 this.broadcast("implosionRevealed");
                 this.state.turnState = TurnState.ChoosingImplodingPosition
@@ -703,7 +709,7 @@ export class GameRoom extends Room<GameRoomState> {
                 this.broadcast("exploded", { player: this.state.players.at(this.state.turnIndex).sessionId });
                 this.removePlayer(this.state.turnIndex, true);
             } else {
-                this.state.players.at(this.state.turnIndex).cards.deleteAt(this.state.players.at(this.state.turnIndex).cards.indexOf(Card.EXPLODING));
+                // Defuse was removed above; Exploding was never added to hand
                 this.state.discard.push(Card.DEFUSE);
                 this.broadcast("defused");
                 this.state.turnState = TurnState.ChoosingExplodingPosition

@@ -1,9 +1,9 @@
-import {useColyseusRoom, useColyseusState} from "../utility/contexts";
-import {useEffect, useState} from "react";
+import { useColyseusRoom, useColyseusState } from "../utility/contexts";
+import { useEffect, useState } from "react";
 import CardHand from "../components/cards/CardHand";
-import {Card} from "../../../server/shared/card";
-import {isCatCard, TurnState} from "../../../server/shared/util";
-import GameModal, {ModalType} from "../components/game/GameModal";
+import { Card } from "../../../server/shared/card";
+import { isCatCard, TurnState } from "../../../server/shared/util";
+import GameModal, { ModalType } from "../components/game/GameModal";
 import Deck from "../components/game/Deck";
 import Discard from "../components/game/Discard";
 import OpponentHand from "../components/game/OpponentHand";
@@ -17,7 +17,7 @@ import {
     useSensor,
     useSensors
 } from "@dnd-kit/core";
-import {arrayMove, sortableKeyboardCoordinates} from "@dnd-kit/sortable";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import DroppableCard from "../components/cards/DroppableCard";
 
 export default function Game() {
@@ -33,19 +33,19 @@ export default function Game() {
 
     // Convert to array for easier manipulation
     const playersArray = players ? Array.from(players) : [];
-    
+
     // Use playerIndexMap - this is the source of truth from server
     let ourIndex = room ? (playerIndexMap.get(room.sessionId) ?? -1) : -1;
-    
+
     // DEBUG: Log player index resolution
     if (room) {
         console.log('[Game] Player Index Debug:');
         console.log('  - Our sessionId:', room.sessionId);
         console.log('  - Our index from map:', ourIndex);
         console.log('  - PlayerIndexMap entries:', Array.from(playerIndexMap.entries()));
-        console.log('  - Players array:', playersArray.map((p, i) => ({index: i, sessionId: p?.sessionId, name: p?.displayName, numCards: p?.numCards})));
+        console.log('  - Players array:', playersArray.map((p, i) => ({ index: i, sessionId: p?.sessionId, name: p?.displayName, numCards: p?.numCards })));
     }
-    
+
     let cardsSchema = playersArray[ourIndex]?.cards;
     let cards = cardsSchema ? cardsSchema.toArray() : [];
 
@@ -55,7 +55,7 @@ export default function Game() {
         originalIndex: number;
     };
     let opponents: OpponentData[] = [];
-    
+
     if (ourIndex >= 0 && playersArray.length > 1) {
         for (let i = 1; i < playersArray.length; i++) {
             const opponentIndex = (ourIndex + i) % playersArray.length;
@@ -75,50 +75,50 @@ export default function Game() {
     console.log('  - Our sessionId:', room?.sessionId);
     console.log('  - Our index:', ourIndex);
     console.log('  - Opponents count:', opponents.length);
-    console.log('  - Opponents order:', opponents.map(o => ({index: o.originalIndex, name: o.player?.displayName})));
+    console.log('  - Opponents order:', opponents.map(o => ({ index: o.originalIndex, name: o.player?.displayName })));
     console.log('  - PlayerIndexMap:', Array.from(playerIndexMap.entries()));
-    console.log('  - All players:', playersArray.map((p, i) => ({index: i, sessionId: p?.sessionId, name: p?.displayName})));
+    console.log('  - All players:', playersArray.map((p, i) => ({ index: i, sessionId: p?.sessionId, name: p?.displayName })));
 
     // Assign positions based on number of opponents
     // Positions follow clockwise order from player's perspective (bottom)
     // Clockwise: bottom (player) -> left -> top -> right -> bottom
-    const getOpponentPosition = (index: number, total: number): {position: 'top' | 'left' | 'right', offset?: number} => {
-        if (total === 1) return {position: 'top'};
-        if (total === 2) return {position: index === 0 ? 'right' : 'top'};  // Next player on right (clockwise)
-        if (total === 3) return {position: ['right', 'top', 'left'][index] as 'top' | 'left' | 'right'};  // Clockwise: right, top, left
+    const getOpponentPosition = (index: number, total: number): { position: 'top' | 'left' | 'right', offset?: number } => {
+        if (total === 1) return { position: 'top' };
+        if (total === 2) return { position: index === 0 ? 'right' : 'top' };  // Next player on right (clockwise)
+        if (total === 3) return { position: ['right', 'top', 'left'][index] as 'top' | 'left' | 'right' };  // Clockwise: right, top, left
         if (total === 4) {
             // 4 opponents clockwise: right, top-right, top-left, left
-            const positions: Array<{position: 'top' | 'left' | 'right', offset?: number}> = [
-                {position: 'right'},
-                {position: 'top', offset: 150},   // top-right
-                {position: 'top', offset: -150},  // top-left
-                {position: 'left'}
+            const positions: Array<{ position: 'top' | 'left' | 'right', offset?: number }> = [
+                { position: 'right' },
+                { position: 'top', offset: 150 },   // top-right
+                { position: 'top', offset: -150 },  // top-left
+                { position: 'left' }
             ];
             return positions[index];
         }
         if (total === 5) {
             // 5 opponents clockwise: right-bottom, right-top, top, left-top, left-bottom
-            const positions: Array<{position: 'top' | 'left' | 'right', offset?: number}> = [
-                {position: 'right', offset: 80},   // right-bottom
-                {position: 'right', offset: -80},  // right-top
-                {position: 'top'},                 // top center
-                {position: 'left', offset: -80},   // left-top
-                {position: 'left', offset: 80}     // left-bottom
+            const positions: Array<{ position: 'top' | 'left' | 'right', offset?: number }> = [
+                { position: 'right', offset: 80 },   // right-bottom
+                { position: 'right', offset: -80 },  // right-top
+                { position: 'top' },                 // top center
+                { position: 'left', offset: -80 },   // left-top
+                { position: 'left', offset: 80 }     // left-bottom
             ];
             return positions[index];
         }
         if (total >= 6) {
-            const positions: Array<{position: 'top' | 'left' | 'right', offset?: number}> = [
-                {position: 'right', offset: 100},
-                {position: 'right', offset: -100},
-                {position: 'top', offset: 150},
-                {position: 'top', offset: -150},
-                {position: 'left', offset: -100},
-                {position: 'left', offset: 100}
+            const positions: Array<{ position: 'top' | 'left' | 'right', offset?: number }> = [
+                { position: 'right', offset: 100 },
+                { position: 'right', offset: -100 },
+                { position: 'top', offset: 150 },
+                { position: 'top', offset: -150 },
+                { position: 'left', offset: -100 },
+                { position: 'left', offset: 100 }
             ];
             return positions[index % 6];
         }
-        return {position: 'top'};
+        return { position: 'top' };
     };
 
     let [selectedCardMask, setSelectedCardMask] = useState<Array<boolean>>([]);
@@ -152,10 +152,18 @@ export default function Game() {
     const isPlayAllowed = !!room && isPlayValid(selectedCards) && turnState === TurnState.Normal && playerIndexMap.get(room.sessionId) === turnIndex;
 
     let [currentModal, setCurrentModal] = useState(ModalType.None);
-    let [theFuture, setTheFuture] = useState<Card[]>([])
+    let [theFuture, setTheFuture] = useState<Card[]>([]);
+    let [notification, setNotification] = useState<string | null>(null);
+
+    // Auto-clear notification after 3 seconds
+    useEffect(() => {
+        if (!notification) return;
+        const timer = setTimeout(() => setNotification(null), 3000);
+        return () => clearTimeout(timer);
+    }, [notification]);
 
     useEffect(() => {
-        if (!room) return () => {}
+        if (!room) return () => { }
 
         const listeners: Array<() => void> = []
 
@@ -188,6 +196,17 @@ export default function Game() {
             room.onMessage("theFuture", (message) => {
                 setCurrentModal(ModalType.TheFuture);
                 setTheFuture(message.cards)
+            }),
+
+            room.onMessage("defused", () => {
+                const playerName = playersArray[turnIndex]?.displayName ?? 'Ai đó';
+                setNotification(`💣 ${playerName} đã dùng Defuse để thoát khỏi Exploding Kitten!`);
+            }),
+
+            room.onMessage("exploded", (message: { player: string }) => {
+                const player = playersArray.find(p => p?.sessionId === message.player);
+                const playerName = player?.displayName ?? 'Ai đó';
+                setNotification(`💥 ${playerName} đã bị nổ tung!`);
             })
         );
 
@@ -204,7 +223,7 @@ export default function Game() {
         switch (selectedCards.length) {
             case 1:
                 if (!targetSessionId) return;
-                room.send("playCard", {card: selectedCards[0], target: playerIndexMap.get(targetSessionId)});
+                room.send("playCard", { card: selectedCards[0], target: playerIndexMap.get(targetSessionId) });
                 break;
             case 2:
                 // 2-card combo: Need target player AND card position (index)
@@ -234,7 +253,7 @@ export default function Game() {
                 break;
             case 5:
                 if (!targetCard) return;
-                room.send("playCombo", {cards: selectedCards, targetCard: targetCard});
+                room.send("playCombo", { cards: selectedCards, targetCard: targetCard });
                 break;
         }
 
@@ -247,13 +266,13 @@ export default function Game() {
     const [activeId, setActiveId] = useState<number>();
 
     function handleDragStart(event: DragStartEvent) {
-        const {active} = event;
+        const { active } = event;
 
         setActiveId(active.id as number - 1); // ids cannot be 0, so are shifted by 1
     }
 
     function handleDragEnd(event: DragEndEvent) {
-        const {active, over} = event;
+        const { active, over } = event;
         setActiveId(undefined);
 
         if (!over) return;
@@ -302,31 +321,31 @@ export default function Game() {
         // For cards that don't need targets, play them directly
         if (selectedCards.length === 1) {
             const card = selectedCards[0];
-            
+
             // Cards that need no target
             if (![Card.FAVOUR, Card.TARGETEDATTACK].includes(card)) {
-                room.send("playCard", {card: card});
+                room.send("playCard", { card: card });
                 setSelectedCardMask(cards.map(_ => false));
                 return;
             }
-            
+
             // For cards that need targets, show modal
             setCurrentModal(ModalType.TargetPlayer);
             return;
         }
-        
+
         // For combos, show target player modal first
         if (selectedCards.length === 2 || selectedCards.length === 3) {
             setCurrentModal(ModalType.TargetPlayer);
             return;
         }
-        
+
         // For 5-card combos, show discard pile modal
         if (selectedCards.length === 5) {
             setCurrentModal(ModalType.TargetDiscard);
             return;
         }
-        
+
         // If we can't play the cards directly, clear selection
         setSelectedCardMask(cards.map(_ => false));
     }
@@ -349,13 +368,20 @@ export default function Game() {
             onDragEnd={handleDragEnd}
         >
             {/* Leave room button - fixed position top right */}
-            <button 
+            <button
                 onClick={handleLeaveRoom}
                 className="fixed top-4 right-4 z-50 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors shadow-lg"
                 title="Rời phòng"
             >
                 ❌ Rời phòng
             </button>
+
+            {/* Notification banner */}
+            {notification && (
+                <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-yellow-500 text-black font-bold rounded-lg shadow-xl text-center">
+                    {notification}
+                </div>
+            )}
 
             {/* Mini player */}
             <div className="h-full sm:hidden flex flex-col justify-center text-center p-6 align-middle">
@@ -369,9 +395,9 @@ export default function Game() {
             </div>
             <div className="h-full hidden sm:block">
                 <GameModal type={currentModal} playCallback={playCallback}
-                           closeCallback={() => setCurrentModal(ModalType.None)}
-                           theFuture={theFuture}/>
-                
+                    closeCallback={() => setCurrentModal(ModalType.None)}
+                    theFuture={theFuture} />
+
                 {/* Opponents around the table */}
                 {opponents.map((opponentData, index) => {
                     const positionData = getOpponentPosition(index, opponents.length);
@@ -395,7 +421,7 @@ export default function Game() {
                                 <p>Người xem: {spectators.map(player => player?.displayName ?? 'Unknown').join(", ")}</p> : null}
 
                             <p>{"Lượt của " + (turnIndex === ourIndex ? "bạn" : (playersArray[turnIndex]?.displayName ?? 'Unknown')) + " x" + turnRepeats}</p>
-                            
+
                             {/* NOPE notification */}
                             {turnState === TurnState.Noping && cards.includes(Card.NOPE) && (
                                 <div className="mt-2 p-2 bg-red-600 text-white rounded-md animate-pulse">
@@ -406,19 +432,19 @@ export default function Game() {
 
                         <div className={"flex flex-row justify-center md:gap-20 gap-10"}>
                             <Deck drawCallback={() => room && room.send("drawCard")}
-                                  drawDisabled={!room || turnState !== TurnState.Normal || playerIndexMap.get(room.sessionId) !== turnIndex}/>
+                                drawDisabled={!room || turnState !== TurnState.Normal || playerIndexMap.get(room.sessionId) !== turnIndex} />
 
-                            <Discard/>
+                            <Discard />
                         </div>
 
                         <CardHand cards={cards} selectedCardMask={selectedCardMask}
-                                  setSelectedCardMask={setSelectedCardMask} cardOrder={cardOrder}
-                                  activeId={activeId} isPlayAllowed={isPlayAllowed}/>
+                            setSelectedCardMask={setSelectedCardMask} cardOrder={cardOrder}
+                            activeId={activeId} isPlayAllowed={isPlayAllowed} />
                     </div>
                     <DragOverlay>
                         {activeId !== undefined ?
                             <DroppableCard card={cards[activeId]} selectedCards={selectedCards}
-                                           isPlayAllowed={isPlayAllowed}/> : null}
+                                isPlayAllowed={isPlayAllowed} /> : null}
                     </DragOverlay>
                 </div>
             </div>

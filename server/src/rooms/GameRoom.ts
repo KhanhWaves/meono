@@ -419,6 +419,17 @@ export class GameRoom extends Room<GameRoomState> {
             this.state.deck.splice(message.index, 0, this.state.turnState === TurnState.ChoosingImplodingPosition ? Card.IMPLODING : Card.EXPLODING);
             this.state.deckLength = this.state.deck.length;
 
+            // Remove Defuse from player's hand when placing bomb back (for both Exploding and Imploding)
+            const player = this.state.players.at(this.state.turnIndex);
+            const defuseIndex = player.cards.indexOf(Card.DEFUSE);
+            if (defuseIndex !== -1) {
+                const newCards = player.cards.toArray().filter((_, i) => i !== defuseIndex);
+                while (player.cards.length > 0) player.cards.deleteAt(0);
+                newCards.forEach(c => player.cards.push(c));
+                this.state.discard.push(Card.DEFUSE);
+                this.log(`Defuse removed from ${player.displayName}'s hand after placing bomb`);
+            }
+
             this.state.setDistanceToImplosion(this.state.deck.indexOf(Card.IMPLODING));
             this.state.turnState = TurnState.Normal;
             this.endTurn();
@@ -705,11 +716,19 @@ export class GameRoom extends Room<GameRoomState> {
                 this.state.turnState = TurnState.ChoosingImplodingPosition
             }
         } else if (card === Card.EXPLODING) {
-            if (!this.state.players.at(this.state.turnIndex).cards.deleteAt(this.state.players.at(this.state.turnIndex).cards.indexOf(Card.DEFUSE))) {
-                this.broadcast("exploded", { player: this.state.players.at(this.state.turnIndex).sessionId });
+            const player = this.state.players.at(this.state.turnIndex);
+            const defuseIndex = player.cards.indexOf(Card.DEFUSE);
+            this.log(`EXPLODING: player ${player.displayName} has ${player.cards.length} cards, defuse at index ${defuseIndex}`);
+            if (defuseIndex === -1) {
+                this.log(`No defuse found - player explodes!`);
+                this.broadcast("exploded", { player: player.sessionId });
                 this.removePlayer(this.state.turnIndex, true);
             } else {
-                // Defuse was removed above; Exploding was never added to hand
+                // Remove defuse by rebuilding the array without it
+                const newCards = player.cards.toArray().filter((_, i) => i !== defuseIndex);
+                while (player.cards.length > 0) player.cards.deleteAt(0);
+                newCards.forEach(c => player.cards.push(c));
+                this.log(`Defuse used! Player now has ${player.cards.length} cards`);
                 this.state.discard.push(Card.DEFUSE);
                 this.broadcast("defused");
                 this.state.turnState = TurnState.ChoosingExplodingPosition
